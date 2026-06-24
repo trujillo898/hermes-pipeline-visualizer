@@ -1,0 +1,76 @@
+{
+  "version": "0.1.0",
+  "created_at": "2026-06-24T15:30:00Z",
+  "description": "Hyle run_cycle: MetaGate → 5 perception + 3 interpretation (fan-out) → causal → confluence → setup_builder → governor → synthesis. Source: hyle/src/hyle/pipeline.py:84-239",
+  "nodes": [
+    {"id": "meta_gate", "class_type": "hyle.meta_layer.evaluate",
+     "inputs": {"pair_data": "EURUSD", "integrity": "assessed", "killzones": "configured"},
+     "outputs": {"meta_decision": {"type": "object"}}},
+
+    {"id": "perception_fanout", "class_type": "hyle.fanout.perception",
+     "inputs": {"context": {"from": "meta_gate", "output": "meta_decision"}},
+     "outputs": {"market_structure": {"type": "object"},
+                 "liquidity": {"type": "object"},
+                 "footprint": {"type": "object"},
+                 "killzone": {"type": "object"},
+                 "cross_pair": {"type": "object"}}},
+
+    {"id": "market_structure", "class_type": "hyle.perception.MarketStructureAgent",
+     "inputs": {"ctx": {"from": "perception_fanout", "output": "market_structure"}},
+     "outputs": {"out": {"type": "object"}}},
+    {"id": "liquidity", "class_type": "hyle.perception.LiquidityAgent",
+     "inputs": {"ctx": {"from": "perception_fanout", "output": "liquidity"}},
+     "outputs": {"out": {"type": "object"}}},
+    {"id": "footprint", "class_type": "hyle.perception.FootprintAgent",
+     "inputs": {"ctx": {"from": "perception_fanout", "output": "footprint"}},
+     "outputs": {"out": {"type": "object"}}},
+    {"id": "killzone", "class_type": "hyle.perception.KillzoneAgent",
+     "inputs": {"ctx": {"from": "perception_fanout", "output": "killzone"}},
+     "outputs": {"out": {"type": "object"}}},
+    {"id": "cross_pair", "class_type": "hyle.perception.CrossPairAgent",
+     "inputs": {"ctx": {"from": "perception_fanout", "output": "cross_pair"}},
+     "outputs": {"out": {"type": "object"}}},
+
+    {"id": "interpretation_fanout", "class_type": "hyle.fanout.interpretation",
+     "inputs": {"bundle": {"from": "perception_fanout", "output": "market_structure"}},
+     "outputs": {"mtf_alignment": {"type": "object"},
+                 "pattern_validator": {"type": "object"},
+                 "trap_detector": {"type": "object"}}},
+
+    {"id": "mtf_alignment", "class_type": "hyle.interpretation.MTFAlignmentAgent",
+     "inputs": {"ctx": {"from": "interpretation_fanout", "output": "mtf_alignment"}},
+     "outputs": {"out": {"type": "object"}}},
+    {"id": "pattern_validator", "class_type": "hyle.interpretation.PatternValidatorAgent",
+     "inputs": {"ctx": {"from": "interpretation_fanout", "output": "pattern_validator"}},
+     "outputs": {"out": {"type": "object"}}},
+    {"id": "trap_detector", "class_type": "hyle.interpretation.TrapDetectorAgent",
+     "inputs": {"ctx": {"from": "interpretation_fanout", "output": "trap_detector"}},
+     "outputs": {"out": {"type": "object"}}},
+
+    {"id": "causal", "class_type": "hyle.causal.CausalEngine",
+     "inputs": {"ctx": {"from": "pattern_validator", "output": "out"},
+                "trap": {"from": "trap_detector", "output": "out"}},
+     "outputs": {"causal_chain": {"type": "causal_chain"}}},
+
+    {"id": "confluence", "class_type": "hyle.confluence.ConfluenceDetector",
+     "inputs": {"mtf": {"from": "mtf_alignment", "output": "out"},
+                "validator": {"from": "pattern_validator", "output": "out"},
+                "trap": {"from": "trap_detector", "output": "out"},
+                "causal": {"from": "causal", "output": "causal_chain"}},
+     "outputs": {"conf_view": {"type": "object"}}},
+
+    {"id": "setup_builder", "class_type": "hyle.setup.SetupBuilder",
+     "inputs": {"confluence": {"from": "confluence", "output": "conf_view"},
+                "causal": {"from": "causal", "output": "causal_chain"}},
+     "outputs": {"build_result": {"type": "object"}}},
+
+    {"id": "governor", "class_type": "hyle.governor.GovernorAgent",
+     "inputs": {"setup": {"from": "setup_builder", "output": "build_result"}},
+     "outputs": {"verdict": {"type": "cycle_verdict"}}},
+
+    {"id": "synthesis", "class_type": "hyle.synthesis.SynthesisAgent",
+     "inputs": {"setup": {"from": "setup_builder", "output": "build_result"},
+                "verdict": {"from": "governor", "output": "verdict"}},
+     "outputs": {"markdown": {"type": "string"}}}
+  ]
+}
