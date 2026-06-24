@@ -1,5 +1,12 @@
 # Hermes Pipeline Visualizer
 
+[![CI](https://github.com/trujillo898/hermes-pipeline-visualizer/actions/workflows/ci.yml/badge.svg)](https://github.com/trujillo898/hermes-pipeline-visualizer/actions/workflows/ci.yml)
+[![Pages](https://github.com/trujillo898/hermes-pipeline-visualizer/actions/workflows/pages.yml/badge.svg)](https://github.com/trujillo898/hermes-pipeline-visualizer/actions/workflows/pages.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/trujillo898/hermes-pipeline-visualizer/blob/master/LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+
+**🚀 [Live demo on GitHub Pages →](https://trujillo898.github.io/hermes-pipeline-visualizer/)**
+
 A small tool (mine, not a project) for visualizing cognitive pipeline graphs
 as DAGs. Inspired by ComfyUI's DAG JSON format, but with **own spec** and
 **no GPL code** (Route B per `~/.hermes/RULES_UPSTREAM_FOREVER.md`).
@@ -32,7 +39,15 @@ Both screenshots show the visualizer rendering real demo graphs:
 
 ## Use it
 
-### 1. Visualize any pipeline graph
+### 0. Just want to see it? Use GitHub Pages
+
+👉 **https://trujillo898.github.io/hermes-pipeline-visualizer/**
+
+No install, no server. Click "Cargar demo Hyle (16 nodos)" or "Cargar demo 50
+nodos (dagre)" to see the visualizer in action. Paste your own JSON to render
+any DAG.
+
+### 1. Visualize any pipeline graph (local)
 
 ```bash
 # Start a local HTTP server (visualizer needs fetch() for the demo)
@@ -41,9 +56,6 @@ python3 -m http.server 8766 --bind 127.0.0.1
 # Then open http://127.0.0.1:8766/visualizer/visualizer.html in your browser
 # Click "Cargar demo Hyle" or paste your own JSON
 ```
-
-Or open `visualizer/visualizer.html` directly with `file://` — the paste textarea
-and file picker work without a server. Only the "Cargar demo" button needs HTTP.
 
 ### 2. Run the demo end-to-end (validates spec + executor)
 
