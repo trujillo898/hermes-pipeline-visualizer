@@ -301,10 +301,28 @@ document.getElementById("file").onchange = async (e) => {
   try { render(JSON.parse(text)); } catch (err) { setStatus("JSON inválido: " + err.message, true); }
 };
 
-// Helper to load a demo JSON by relative path
+// Helper to load a demo JSON by relative path.
+// Uses URL resolution (not string concat) so the same call works at any
+// deployment depth. `relativePath` should start with "/" if you mean
+// "relative to the project root", or be a plain filename for "same dir".
+// This way the same visualizer.html works when served from:
+//   - /visualizer/visualizer.html (local: `python -m http.server` from project root)
+//   - /index.html (GitHub Pages: https://<user>.github.io/<repo>/)
 function loadDemoJson(relativePath) {
-  const base = window.location.pathname.replace(/\/visualizer\/visualizer\.html.*$/, "");
-  const url = base + relativePath;
+  // Resolve relative to the project root (the directory ABOVE /visualizer/
+  // for local, and the same as the URL path for GitHub Pages).
+  // window.location.pathname looks like:
+  //   Local:  /visualizer/visualizer.html → /visualizer
+  //   Pages:  /index.html                 → "" (no /visualizer/ segment)
+  // We need to strip the /visualizer/ segment too for local to get the
+  // project root, but for Pages "" already IS the project root.
+  let dir = window.location.pathname.replace(/\/[^/]*$/, "");  // strip filename
+  dir = dir.replace(/\/visualizer$/, "");                       // strip /visualizer (local only)
+  // Now `dir` is the project root in both contexts:
+  //   Local:  "" (or whatever path the server is rooted at)
+  //   Pages:  ""
+  // Use URL resolution to handle slashes correctly:
+  const url = new URL(dir + relativePath, window.location.href).href;
   return fetch(url)
     .then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status} loading ${url}`);

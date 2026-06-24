@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+
+# Only allow concurrent deploys, cancelling older runs.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    # Only deploy when CI passed (or manual trigger)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build gh-pages artifact
+        run: |
+          mkdir -p _site
+          # Copy the visualizer HTML and demos to the root of _site
+          # so the deployed URL is https://<user>.github.io/<repo>/
+          # (no /visualizer/ prefix in the URL).
+          cp visualizer/visualizer.html _site/index.html
+          cp -r demos _site/demos
+          cp LICENSE _site/LICENSE
+          # The visualizer's loadDemoJson() helper uses URL() resolution
+          # and strips the /visualizer/ segment when present, so it works
+          # at any deployment depth without code changes.
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
