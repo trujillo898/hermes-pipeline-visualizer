@@ -1,5 +1,7 @@
 """Async pipeline executor — Phase 2.
 
+SPDX-License-Identifier: MIT
+
 Runs a PipelineGraph topologically (Kahn's algorithm) and dispatches each node
 to a handler looked up in HandlerRegistry.
 

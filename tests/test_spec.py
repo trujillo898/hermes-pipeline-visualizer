@@ -1,5 +1,7 @@
 """Tests for the spec.graph module — Phase 1 (RED).
 
+SPDX-License-Identifier: MIT
+
 Contract being tested:
 - PipelineGraph round-trips through JSON preserving all fields
 - Ref serializes with alias "from" (not "from_node")

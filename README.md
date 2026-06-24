@@ -17,11 +17,17 @@ as DAGs. Inspired by ComfyUI's DAG JSON format, but with **own spec** and
 
 ## Visualizer screenshot
 
+### Hyle cycle (16 nodes, manual layout)
+
 ![Hyle cycle demo](docs/screenshots/visualizer-with-hyle-demo.png)
 
-The screenshot above shows the visualizer rendering the Hyle cycle:
-- 16 nodes color-coded by output type
-- 21 edges drawn as arrows
+### Big graph (50 nodes, dagre layout auto-loaded)
+
+![Big graph with dagre](docs/screenshots/visualizer-with-dagre-50-nodes.png)
+
+Both screenshots show the visualizer rendering real demo graphs:
+- Hyle: 16 nodes color-coded by output type, 21 edges drawn as arrows
+- Big: 50 nodes via dagre.js (lazy-loaded from CDN when graph crosses threshold)
 - Inspector sidebar shows details on click
 
 ## Use it
@@ -127,16 +133,36 @@ Refs are JSON objects with `from` (node_id) and `output` (port name):
 
 ## Limitations (intentional, MVP)
 
-- Layout is manual hierarchical (no dagre). Looks fine up to ~30 nodes.
+- For graphs with ≥30 nodes, dagre.js is lazy-loaded from CDN
+  (`https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js`). The first
+  load takes ~200-500ms; subsequent loads use the browser cache. The threshold
+  is a constant `DAGRE_THRESHOLD = 30` in `visualizer.html` — change it there.
 - No HTTP server for live streaming — bonus, not core
 - No persistence of executions — `_cache` dies with the process
 - No visual graph editor (drag-to-add) — that would be a ComfyUI clone
 - Demo handlers are stubs, not the real Hyle code (keeps this repo independent of `~/Ousia/hyle/`)
 
+## Hybrid layout (Phase 4)
+
+The visualizer picks a layout strategy based on graph size:
+
+| Node count | Layout | CDN dep | First-load cost |
+|---|---|---|---|
+| < 30 | `layoutManual` (built-in, hierarchical) | None | 0ms (offline-capable) |
+| ≥ 30 | `layoutDagre` (dagre.js from CDN) | jsdelivr | ~200-500ms (cached after) |
+
+The decision function `shouldUseDagre(nodeCount, threshold=30)` is unit-tested
+in `tests/test_visualizer_layout.py`. A second demo at
+`demos/big_graph/big_graph.json` (50 nodes) exercises the dagre path — click
+"Cargar demo 50 nodos (dagre)" in the toolbar.
+
+If dagre.js fails to load (e.g. offline), the visualizer falls back to the
+manual layout and shows a warning in the status bar. No data is lost.
+
 ## License
 
-Spec and code: choose MIT or Apache-2.0 when you adopt this.
-Currently UNLICENSED — this is a personal debug tool, not a published library.
+MIT. See [LICENSE](LICENSE). All source files include the
+`SPDX-License-Identifier: MIT` header.
 
 ## References
 

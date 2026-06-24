@@ -1,4 +1,6 @@
-"""Tests for executor.runner — Phase 2 (RED).
+"""Tests for the PipelineExecutor — Phase 2 (RED).
+
+SPDX-License-Identifier: MIT
 
 Contract being tested:
 - HandlerRegistry rejects duplicate class_types

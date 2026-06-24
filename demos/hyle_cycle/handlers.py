@@ -1,5 +1,7 @@
 """Demo handlers for the Hyle cycle.
 
+SPDX-License-Identifier: MIT
+
 Only 2 nodes have real logic (meta_gate, governor).
 The other 13 are stubs that return a deterministic marker so we can
 verify the executor traverses the graph end-to-end without pulling in

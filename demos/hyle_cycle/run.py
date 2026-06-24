@@ -1,5 +1,7 @@
 """Run the Hyle cycle demo end-to-end.
 
+SPDX-License-Identifier: MIT
+
 Usage:
     cd ~/hermes-pipeline-visualizer
     python3 demos/hyle_cycle/run.py

@@ -56,7 +56,8 @@
       <textarea id="paste" placeholder='{ "version": "0.1.0", ... }'></textarea>
       <div class="row">
         <button id="render" class="primary">Renderizar</button>
-        <button id="load-demo">Cargar demo Hyle</button>
+        <button id="load-demo" title="16 nodos, layout manual">Cargar demo Hyle (16 nodos)</button>
+        <button id="load-demo-big" title="50 nodos, requiere CDN dagre.js">Cargar demo 50 nodos (dagre)</button>
         <input type="file" id="file" accept=".json" style="display:none">
         <button onclick="document.getElementById('file').click()">Archivo...</button>
         <span id="status"></span>
@@ -113,8 +114,17 @@ function buildEdges(nodes) {
   return edges;
 }
 
+// === Layout decision: threshold for switching from manual to dagre ===
+// Manual layout: zero dependencies, fast for small graphs (<30 nodes).
+// Dagre layout: requires CDN, scales gracefully to large graphs (>=30 nodes).
+const DAGRE_THRESHOLD = 30;
+
+function shouldUseDagre(nodeCount, threshold = DAGRE_THRESHOLD) {
+  return nodeCount >= threshold;
+}
+
 // === Hierarchical layout (deps-left, no dagre needed for MVP) ===
-function layout(nodes, edges) {
+function layoutManual(nodes, edges) {
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
   const depth = {};
   function visit(id, seen) {
@@ -144,9 +154,42 @@ function layout(nodes, edges) {
   return pos;
 }
 
+// === Dagre layout: lazy-loaded from CDN only when needed ===
+// dagre is a layered graph layout library (~70KB minified). We load it
+// only when the graph crosses DAGRE_THRESHOLD, so small graphs work fully
+// offline. Loaded script tag is cached by the browser so subsequent large
+// graphs in the same session don't re-download.
+function loadDagre() {
+  if (window.dagre) return Promise.resolve(window.dagre);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js";
+    s.onload = () => resolve(window.dagre);
+    s.onerror = () => reject(new Error("Failed to load dagre.js from CDN"));
+    document.head.appendChild(s);
+  });
+}
+
+async function layoutDagre(nodes, edges) {
+  const dagre = await loadDagre();
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: "LR", nodesep: 40, ranksep: 80, marginx: 20, marginy: 20 });
+  g.setDefaultEdgeLabel(() => ({}));
+  nodes.forEach(n => g.setNode(n.id, { width: 180, height: 60 }));
+  edges.forEach(e => g.setEdge(e.from, e.to));
+  dagre.layout(g);
+  const pos = {};
+  nodes.forEach(n => {
+    const p = g.node(n.id);
+    // dagre returns center coords; top-left for SVG translate
+    pos[n.id] = { x: p.x - 90, y: p.y - 30 };
+  });
+  return pos;
+}
+
 let selected = null;
 
-function render(graph) {
+async function render(graph) {
   if (!graph || !graph.nodes || !graph.nodes.length) {
     setStatus("JSON inválido: falta 'nodes'", true);
     return;
@@ -165,7 +208,19 @@ function render(graph) {
      .append("path").attr("d", "M0,-5L10,0L0,5").attr("fill", "#888");
 
   const edges = buildEdges(graph.nodes);
-  const pos = layout(graph.nodes, edges);
+  // Choose layout strategy: manual for small graphs, dagre (CDN) for big ones
+  let pos;
+  if (shouldUseDagre(graph.nodes.length)) {
+    try {
+      setStatus(`Cargando dagre.js desde CDN (grafo de ${graph.nodes.length} nodos)...`, false);
+      pos = await layoutDagre(graph.nodes, edges);
+    } catch (e) {
+      setStatus(`dagre.js falló (${e.message}) — fallback a manual`, true);
+      pos = layoutManual(graph.nodes, edges);
+    }
+  } else {
+    pos = layoutManual(graph.nodes, edges);
+  }
 
   // Compute SVG dimensions from layout
   const maxX = Math.max.apply(null, Object.values(pos).map(p => p.x)) + 250;
@@ -246,20 +301,30 @@ document.getElementById("file").onchange = async (e) => {
   try { render(JSON.parse(text)); } catch (err) { setStatus("JSON inválido: " + err.message, true); }
 };
 
-document.getElementById("load-demo").onclick = () => {
-  // Resolve demo path relative to the project root.
-  // The visualizer is at /visualizer/visualizer.html, demo at /demos/hyle_cycle/hyle_cycle.json
+// Helper to load a demo JSON by relative path
+function loadDemoJson(relativePath) {
   const base = window.location.pathname.replace(/\/visualizer\/visualizer\.html.*$/, "");
-  const url = base + "/demos/hyle_cycle/hyle_cycle.json";
-  fetch(url)
+  const url = base + relativePath;
+  return fetch(url)
     .then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status} loading ${url}`);
       return r.text();
     })
     .then(text => {
       document.getElementById("paste").value = text;
-      render(JSON.parse(text));
-    })
+      return JSON.parse(text);
+    });
+}
+
+document.getElementById("load-demo").onclick = () => {
+  loadDemoJson("/demos/hyle_cycle/hyle_cycle.json")
+    .then(graph => render(graph))
+    .catch(err => setStatus("Demo no encontrada: " + err.message, true));
+};
+
+document.getElementById("load-demo-big").onclick = () => {
+  loadDemoJson("/demos/big_graph/big_graph.json")
+    .then(graph => render(graph))
     .catch(err => setStatus("Demo no encontrada: " + err.message, true));
 };
 

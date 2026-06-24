@@ -1,5 +1,7 @@
 """Hermes Pipeline Visualizer — DAG graph spec.
 
+SPDX-License-Identifier: MIT
+
 Own MIT/Apache-2.0 spec for declarative cognitive pipelines. Inspired by
 ComfyUI's DAG JSON but with:
 - Explicit output types (so the visualizer can color without executing)
